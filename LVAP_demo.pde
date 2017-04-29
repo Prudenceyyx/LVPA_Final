@@ -1,3 +1,4 @@
+//import processing.serial.*;
 import ddf.minim.*;
 import ddf.minim.analysis.*;
 
@@ -6,68 +7,68 @@ AudioPlayer song;
 BeatDetect beat;
 BeatListener bl;
 
-import processing.pdf.*;
 import java.util.Calendar;
 
 boolean saveGIF = false;
 
-int tileCount = 15;
+int tileWidth = 8; //
+int tileHeight = 6;// actual grid in height=tileCount*0.75
+//int tileCount = 16; //actual grid in width
+//1024/16=768/12
 int actRandomSeed = 0;
 
 int actStrokeCap = ROUND;
 
 float kickSize, snareSize, hatSize;
-int Owidth=512;
-int Oheight=200;
+//int Owidth=512;
+//int Oheight=200;
 
 
-int maxFontSize=350/tileCount;
-int minFontSize=maxFontSize-20;
+int maxFontSize=37;
+int minFontSize=3;
 
 import gifAnimation.*;
 import processing.opengl.*;
 GifMaker gifExport;
 
+color circleColor = color(255);
+int circleAlpha = 180;
+
+int RHeight=384;//768/2
+int RWidth=524;//1024/2
+
 
 void setup()
 {
   frameRate(30);
-  size(600, 800, OPENGL);
+  size(1024, 768, OPENGL);
 
   minim = new Minim(this);
 
   song = minim.loadFile("marcus_kellis_theme.mp3", 1024);
   song.play();
-  // a beat detection object that is FREQ_ENERGY mode that 
-  // expects buffers the length of song's buffer size
-  // and samples captured at songs's sample rate
+
   beat = new BeatDetect(song.bufferSize(), song.sampleRate());
-  // set the sensitivity to 300 milliseconds
-  // After a beat has been detected, the algorithm will wait for 300 milliseconds 
-  // before allowing another beat to be reported. You can use this to dampen the 
-  // algorithm if it is giving too many false-positives. The default value is 10, 
-  // which is essentially no damping. If you try to set the sensitivity to a negative value, 
-  // an error will be reported and it will be set to 10 instead. 
-  // note that what sensitivity you choose will depend a lot on what kind of audio 
-  // you are analyzing. in this example, we use the same BeatDetect object for 
-  // detecting kick, snare, and hat, but that this sensitivity is not especially great
-  // for detecting snare reliably (though it's also possible that the range of frequencies
-  // used by the isSnare method are not appropriate for the song).
-  beat.setSensitivity(300);  
+
+  beat.setSensitivity(300);
+  
   kickSize = snareSize = hatSize = minFontSize;
-  // make a new beat listener, so that we won't miss any buffers for the analysis
+
   bl = new BeatListener(beat, song);  
-  textFont(createFont("Helvetica", 16));
-  textAlign(CENTER);
+  //textFont(createFont("Helvetica", 16));
+  //textAlign(CENTER);
 
   gifExport = new GifMaker(this, "export.gif");
   gifExport.setRepeat(0); // make it an "endless" animation
+ 
+  tileHeight=int(tileWidth*0.75);
+  
 }
 
 void draw()
 {
 
-  background(255);
+  background(0); //black background
   // draw a green rectangle for every detect band
   // that had an onset this frame
   //float rectW = width / beat.detectSize();
@@ -94,66 +95,99 @@ void draw()
   //  rect(rectW*lowBand, 0, (highBand-lowBand)*rectW, Oheight);
   //}
 
-  smooth();
-  noFill();
-  strokeCap(actStrokeCap);
-  randomSeed(actRandomSeed);
-
-  if ( beat.isKick() ) {
-    kickSize = maxFontSize;
-  }
-  if ( beat.isSnare() ) snareSize = maxFontSize;
+  
   if ( beat.isHat() ) {
     hatSize = maxFontSize;
   }
+  else if ( beat.isKick() ) {
+    kickSize = maxFontSize;
+  }
+  //if ( beat.isSnare() ) snareSize = maxFontSize;
 
-  for (int gridY=0; gridY<tileCount; gridY++) {
-    for (int gridX=0; gridX<tileCount; gridX++) {
 
-      int posX = width/tileCount*gridX;
-      int posY = (height-Oheight)/tileCount*gridY;
+  //translate(width/tileCount/2, height/tileCount/2);
+
+  //background(0);
+  //smooth();
+  //noFill();
+
+
+  //stroke(circleColor, circleAlpha);
+  //strokeWeight(kickSize);
+
+  //for (int gridY=0; gridY<tileCount; gridY++) {
+  //  for (int gridX=0; gridX<tileCount; gridX++) {
+
+  //    float posX = 600/tileCount * gridX;
+  //    float posY = 600/tileCount * gridY;
+
+  //    float shiftX = random(-kickSize*20, kickSize*20)/20;
+  //    float shiftY = random(-kickSize*20, kickSize*20)/20;
+
+  //    ellipse(posX+shiftX, posY+shiftY, kickSize/2/15, hatSize/2/15);
+  //  }
+  //}
+  pushMatrix();
+  smooth();
+  noFill();
+  
+  
+  randomSeed(actRandomSeed);
+  scale(2);
+  //stroke(255);
+  strokeCap(ROUND);
+  for (int gridY=0; gridY<tileHeight; gridY++) {
+    for (int gridX=0; gridX<tileWidth; gridX++) {
+stroke(map(kickSize,minFontSize,maxFontSize,200,255));
+      int posX = int(RWidth/tileWidth)*gridX;
+      int posY = int(RHeight/tileHeight)*gridY;
 
       int toggle = (int) random(0, 2);
 
       if (toggle == 0) {
+
         strokeWeight(kickSize);
-        line(posX, posY, posX+width/tileCount, posY+(height-Oheight)/tileCount);
+        line(posX, posY, posX+RWidth/tileWidth, posY+RHeight/tileHeight);
       }
       if (toggle == 1) {
+stroke(map(hatSize,minFontSize,maxFontSize,100,255));
         strokeWeight(hatSize);
-        line(posX, posY+width/tileCount, posX+(height-Oheight)/tileCount, posY);
+        line(posX, posY+RWidth/tileWidth, posX+RHeight/tileHeight, posY);
       }
     }
   }
+scale(2);
 
-
-
-
-  translate(0, height-Oheight);
-
-  fill(0);
-  rect(0, 0, width, Oheight);
-  fill(255);
-
-  textSize(kickSize);
-  text("KICK", width/4, Oheight/2);
-
-  textSize(snareSize);
-  text("SNARE", width/2, Oheight/2);
-
-  textSize(hatSize);
-  text("HAT", 3*width/4, Oheight/2);
+  popMatrix();
+  
 
   kickSize = constrain(kickSize * 0.93, minFontSize, maxFontSize);
   snareSize = constrain(snareSize * 0.93, minFontSize, maxFontSize);
-  hatSize = constrain(hatSize * 0.95, minFontSize, maxFontSize);
+  hatSize = constrain(hatSize * 0.93, minFontSize, maxFontSize);
+  
+  handleSerial();
+  save(saveGIF);
 
+  
+}
+
+
+void handleSerial(){
+  println("kickSize: "+kickSize+", hatSize: "+hatSize);
+  
+  
+}
+
+void save(boolean saveGIF){
   if (saveGIF) {
     gifExport.setDelay(1);
     gifExport.addFrame();
-    if(frameCount%30==0) println(second());
+    if (frameCount%30==0) println(second());
   }
 }
+
+
+
 
 void mousePressed() {
   actRandomSeed = (int) random(100000);
@@ -169,15 +203,6 @@ void keyReleased() {
     println("GIF: "+saveGIF);
   }
 
-  if (key == '1') {
-    actStrokeCap = ROUND;
-  }
-  if (key == '2') {
-    actStrokeCap = SQUARE;
-  }
-  if (key == '3') {
-    actStrokeCap = PROJECT;
-  }
 }
 
 
