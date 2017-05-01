@@ -6,9 +6,10 @@ Minim minim;
 AudioPlayer song;
 BeatDetect beat;
 BeatListener bl;
+FFT fft;
 
 import java.util.Calendar;
-
+int STATE=2;
 boolean saveGIF = false;
 
 int tileWidth = 8; //
@@ -38,37 +39,42 @@ int RHeight=384;//768/2
 int RWidth=524;//1024/2
 
 
+
+
+
 void setup()
 {
   frameRate(30);
-  size(1024, 768, OPENGL);
+  size(1024, 768, P3D);
 
   minim = new Minim(this);
-
   song = minim.loadFile("marcus_kellis_theme.mp3", 1024);
   song.play();
 
   beat = new BeatDetect(song.bufferSize(), song.sampleRate());
-
   beat.setSensitivity(300);
-  
-  kickSize = snareSize = hatSize = minFontSize;
 
+  fft = new FFT(song.bufferSize(), song.sampleRate());
+  kickSize = snareSize = hatSize = minFontSize;
+newShapeSize=int(kickSize);
   bl = new BeatListener(beat, song);  
   //textFont(createFont("Helvetica", 16));
   //textAlign(CENTER);
 
   gifExport = new GifMaker(this, "export.gif");
   gifExport.setRepeat(0); // make it an "endless" animation
- 
+
   tileHeight=int(tileWidth*0.75);
-  
+  state4setup();
+  state5setup();
+  currentShape = loadShape("module_1.svg");
 }
 
 void draw()
 {
-
-  background(0); //black background
+  scale(2);
+  background(255);
+  fft.forward(song.mix);
   // draw a green rectangle for every detect band
   // that had an onset this frame
   //float rectW = width / beat.detectSize();
@@ -95,98 +101,56 @@ void draw()
   //  rect(rectW*lowBand, 0, (highBand-lowBand)*rectW, Oheight);
   //}
 
-  
+
   if ( beat.isHat() ) {
     hatSize = maxFontSize;
-  }
-  else if ( beat.isKick() ) {
+  } 
+  if ( beat.isKick() ) {
     kickSize = maxFontSize;
   }
-  //if ( beat.isSnare() ) snareSize = maxFontSize;
+  if ( beat.isSnare() ) snareSize = maxFontSize;
 
 
-  //translate(width/tileCount/2, height/tileCount/2);
+  run(STATE);
 
-  //background(0);
-  //smooth();
-  //noFill();
-
-
-  //stroke(circleColor, circleAlpha);
-  //strokeWeight(kickSize);
-
-  //for (int gridY=0; gridY<tileCount; gridY++) {
-  //  for (int gridX=0; gridX<tileCount; gridX++) {
-
-  //    float posX = 600/tileCount * gridX;
-  //    float posY = 600/tileCount * gridY;
-
-  //    float shiftX = random(-kickSize*20, kickSize*20)/20;
-  //    float shiftY = random(-kickSize*20, kickSize*20)/20;
-
-  //    ellipse(posX+shiftX, posY+shiftY, kickSize/2/15, hatSize/2/15);
-  //  }
-  //}
-  pushMatrix();
-  smooth();
-  noFill();
-  
-  
-  randomSeed(actRandomSeed);
-  scale(2);
-  //stroke(255);
-  strokeCap(ROUND);
-  for (int gridY=0; gridY<tileHeight; gridY++) {
-    for (int gridX=0; gridX<tileWidth; gridX++) {
-stroke(map(kickSize,minFontSize,maxFontSize,200,255));
-      int posX = int(RWidth/tileWidth)*gridX;
-      int posY = int(RHeight/tileHeight)*gridY;
-
-      int toggle = (int) random(0, 2);
-
-      if (toggle == 0) {
-
-        strokeWeight(kickSize);
-        line(posX, posY, posX+RWidth/tileWidth, posY+RHeight/tileHeight);
-      }
-      if (toggle == 1) {
-stroke(map(hatSize,minFontSize,maxFontSize,100,255));
-        strokeWeight(hatSize);
-        line(posX, posY+RWidth/tileWidth, posX+RHeight/tileHeight, posY);
-      }
-    }
-  }
-scale(2);
-
-  popMatrix();
-  
 
   kickSize = constrain(kickSize * 0.93, minFontSize, maxFontSize);
   snareSize = constrain(snareSize * 0.93, minFontSize, maxFontSize);
   hatSize = constrain(hatSize * 0.93, minFontSize, maxFontSize);
-  
+
   handleSerial();
-  save(saveGIF);
+  saveGIF(saveGIF);
+}
 
-  
+void run(int STATE) {
+  if (STATE==1) state1();
+  else if (STATE==2) state2();
+  else if (STATE==3) state3();
+  else if (STATE==4) state4();
+  else if (STATE==5) {
+    state5();
+    camera();
+  }
+  else if (STATE==0) state0();
+}
+
+void state0() {
+  background(0);
 }
 
 
-void handleSerial(){
-  println("kickSize: "+kickSize+", hatSize: "+hatSize);
-  
-  
+void handleSerial() {
+  //println("kickSize: "+kickSize+", hatSize: "+hatSize);
 }
 
-void save(boolean saveGIF){
+
+void saveGIF(boolean saveGIF) {
   if (saveGIF) {
     gifExport.setDelay(1);
     gifExport.addFrame();
     if (frameCount%30==0) println(second());
   }
 }
-
-
 
 
 void mousePressed() {
@@ -203,6 +167,11 @@ void keyReleased() {
     println("GIF: "+saveGIF);
   }
 
+  int a=int(key);
+  if (a>47 & a<58) {//if key is a number from 0 to 9, assign the STATE
+    a -= 48;
+    STATE=a;
+  }
 }
 
 
